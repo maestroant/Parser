@@ -1,12 +1,6 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Parser
 {
@@ -25,7 +19,7 @@ namespace Parser
             catch (Exception ex)
             {
                 Loger.Error("Setting : " + ex.GetType().FullName);
-                Process.GetCurrentProcess().Kill();
+                Loger.StopProgram();
             }
 
         }

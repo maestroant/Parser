@@ -1,56 +1,61 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Alba.CsConsoleFormat;
+using System;
+using static System.ConsoleColor;
+
 
 namespace Parser
 {
     internal class Statistics
     {
-        private static System.DateTime dateStart = DateTime.Now;
-
-        private static void GreenWriteln(string name, string value)
+        private static System.DateTime dateStart;
+        public int TaskGetOrders { get; set; }
+        public int TaskSendOrders { get; set; }
+        public Statistics()
         {
-            var v = Console.ForegroundColor;
-            Console.Write(name);
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine(value);
-            Console.ForegroundColor = v;
+            TaskGetOrders = 0;
+            TaskSendOrders = 0;
+            dateStart = DateTime.Now;
         }
 
-        private static void YellowWriteln(string name, string value)
-        {
-            var v = Console.ForegroundColor;
-            Console.Write(name);
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine(value);
-            Console.ForegroundColor = v;
-        }
-
-        private static void RedWriteln(string name, string value)
-        {
-            var v = Console.ForegroundColor;
-            Console.Write(name);
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine(value);
-            Console.ForegroundColor = v;
-        }
-
-        public static void Get()
+        public void Show()
         {
             System.TimeSpan date = DateTime.Now - dateStart;
-            int i;
-            Console.WriteLine("======================================================");
-            Console.WriteLine("   Number of Tasks: \t\t123" );
-            Console.WriteLine("   Number of Socks: \t\t2343");
-            YellowWriteln("   Start time: \t\t\t", dateStart.ToString());
-            GreenWriteln("   Time has Passed: \t\t", date.ToString(@"hh\:mm\:ss"));
-            RedWriteln("   Number of active Threads: \t", Process.GetCurrentProcess().Threads.Count.ToString());
-            lock (Program.OrdersList) i = Program.OrdersList.Count;
-            GreenWriteln("   Number of processed Orders: \t", i.ToString());
-            Console.WriteLine("");
+            int proxyCount;
+            lock (Program.ProxyList) proxyCount = Program.ProxyList.Count;
+            int numberTasks;
+            lock (Program.ImeiList) numberTasks = Program.ImeiList.Count;
+            int processedOrders;
+            lock (Program.OrdersList) processedOrders = Program.OrdersList.Count;
+            int wrongCount;
+            lock (Program.WrongList) wrongCount = Program.WrongList.Count;
+            int threadCount = MainThread.GetRunThread();
+
+            var headerThickness = new LineThickness(LineWidth.Double, LineWidth.Single);
+            var doc = new Document(
+                new Grid
+                {
+                    Color = Gray,
+                    Columns = { GridLength.Auto, GridLength.Auto },
+                    Children =
+                    {
+                            new Cell("Name") { Stroke = headerThickness },
+                            new Cell("Result") { Stroke = headerThickness },
+                            new Cell("Number of Tasks"), new Cell(numberTasks.ToString()) { Color = Yellow } ,
+                            new Cell("Number of Socks"), new Cell(proxyCount.ToString()) { Color = Yellow },
+                            new Cell("Start time"), new Cell(dateStart.ToString()) { Color = Yellow } ,
+                            new Cell("Time has Passed"), new Cell(date.ToString(@"hh\:mm\:ss")) { Color = Green },
+                            new Cell("Number of processed Orders "), new Cell(processedOrders.ToString()) { Color = Green } ,
+                            new Cell("Number of processed Wrong "), new Cell(wrongCount.ToString()) { Color = Green } ,
+                            new Cell("Number of active Threads"), new Cell(threadCount.ToString()) { Color = Green},
+                            new Cell("Error Count"), new Cell(Loger.GetErorCount().ToString()) { Color = Red} ,
+                            new Cell("Total Received"), new Cell(TaskGetOrders.ToString()) {  Color = Cyan},
+                            new Cell("Total Sent"), new Cell(TaskSendOrders.ToString()) { Color = Cyan}
+
+                    }
+                });
+
+            Console.WriteLine();
+            ConsoleRenderer.RenderDocument(doc);
         }
     }
 }

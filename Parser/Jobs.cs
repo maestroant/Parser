@@ -1,28 +1,16 @@
-﻿using Newtonsoft.Json;
-using OpenQA.Selenium;
-using OpenQA.Selenium.Remote;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System;
 
 namespace Parser
 {
     internal class Jobs
     {
+
         public static void Go()
         {
             // тут вся работа в цикле пока не кончаться задания
-           // Random rnd = new Random();
-           int indexProxy = 0;
-
             while (true)
             {
                 Order order = new Order();
-                string proxy;
 
                 lock (Program.ImeiList)
                 {
@@ -31,98 +19,147 @@ namespace Parser
                     Loger.Info("Go: " + order.OrderIMEI);
                     Program.ImeiList.RemoveAt(0);
                 }
+                RandomProxy randProxy = new RandomProxy();
+                FormatProxy fProxy = randProxy.Next();
 
-                lock (Program.ProxyList)
-                {
-                    if (Program.ProxyList.Count == 0)
-                    {
-                        Loger.Error("Proxy list Empty");
-                        return;
-                    }
-                        
-                    proxy = Program.ProxyList[indexProxy];
-                }
+                //----------------------------------------------------------------------------------------------
 
-                FormatProxy fProxy = new FormatProxy(proxy);
-                indexProxy++;
-                lock (Program.OrdersList) if (indexProxy >= Program.OrdersList.Count) indexProxy = 0;
+                Visible vivible = new Visible(order.OrderIMEI, fProxy);
 
-                if (!GetOrder(order, fProxy))
-                {
-                    lock (Program.ProxyList)
-                    {
-                       Loger.Info("Info not found. Repeat ride: " + order.OrderIMEI);
-
-                       proxy = Program.ProxyList[indexProxy];
-                        FormatProxy fProxy2 = new FormatProxy(proxy);
-                        if (!GetOrder(order, fProxy))
-                        {
-                            lock (Program.WrongList) Program.WrongList.Add(order.OrderIMEI);
-                            Loger.Info("Wrong Add: " + order.OrderIMEI);
-                        } 
-
-                    }
-
-                }
-
-            }
-        }
-
-        private static bool GetOrder(Order order, FormatProxy fProxy)
-        {
-            Visible vivible = new Visible(order.OrderIMEI, fProxy);
-
-            if (string.IsNullOrEmpty(vivible.IMEI1))
-            {
-                Tmobile tmobile = new Tmobile(order.OrderIMEI, fProxy);
-                if (string.IsNullOrEmpty(tmobile.IMEI1))
+                if (vivible.Result == Visible.ResultEnum.WRONG_RESULT)
                 {
                     lock (Program.WrongList) Program.WrongList.Add(order.OrderIMEI);
-                    Loger.Error(order.OrderIMEI + " not found!");
-                    return false;
+                    Loger.Info("Add Wrong IMEI: " + order.OrderIMEI);
+                    continue;
                 }
 
-                order.IMEI1 = tmobile.IMEI1;
-                order.IMEI2 = tmobile.IMEI2;
-            }
-            else
-            {
-                order.IMEI1 = vivible.IMEI1;
-                order.IMEI2 = vivible.IMEI2;
-            }
+                if (vivible.Result != Visible.ResultEnum.OK)
+                {
+                    if (vivible.Result == Visible.ResultEnum.ERROR_SOCKS)
+                        randProxy.DeleteBadProxy();
 
-            Business business = new Business(order.OrderIMEI, fProxy);
-            if (business.Response == null) return false;
-            order.CurrentGSMAStatus = (business.BlackListed == false) ? "Clean" : "Blacklisted";
+                    Loger.Info("Repeat Vivible");
+                    fProxy = randProxy.Next();
+                    vivible = new Visible(order.OrderIMEI, fProxy);
+                }
 
+                //-------------------------------------------------------------------------------------------
 
-            Ecoatm ecoatm = new Ecoatm(order.OrderIMEI, fProxy);
-            if (ecoatm.Response == null)
-            {
-                return false;
-            }
-            try
-            {
-                order.Model = ecoatm.Response.model;
-                if (order.Model == null) return false;
-                order.SerialNumber = ecoatm.Response.serialNumber;
-                order.FMI = ecoatm.Response.fmip;
-                order.SimLock = ecoatm.Response.simLock;
-                order.Carrier = ecoatm.Response.carrier;
-            }
-            catch (Exception ex)
-            {
-                //lock (Program.WrongList) Program.WrongList.Add(order.OrderIMEI);
-                return false;
-            }
+                if (vivible.Result != Visible.ResultEnum.OK)
+                {
+                    Tmobile tmobile = new Tmobile(order.OrderIMEI, fProxy);
 
-            lock (Program.OrdersList)
-            {
-                Loger.Info("Add Order:");
-                Loger.Info(order.ToString());
-            }
+                    if (tmobile.Result == Tmobile.ResultEnum.WRONG_RESULT)
+                    {
+                        lock (Program.WrongList) Program.WrongList.Add(order.OrderIMEI);
+                        Loger.Info("Add Wrong IMEI: " + order.OrderIMEI);
+                        continue;
+                    }
 
-            return true;
+                    if (tmobile.Result != Tmobile.ResultEnum.OK)
+                    {
+                        if (tmobile.Result == Tmobile.ResultEnum.ERROR_SOCKS)
+                            randProxy.DeleteBadProxy();
+                        Loger.Info("Repeat Tmobile");
+                        fProxy = randProxy.Next();
+                        tmobile = new Tmobile(order.OrderIMEI, fProxy);
+                    }
+
+                    if (tmobile.Result == Tmobile.ResultEnum.WRONG_RESULT)
+                    {
+                        lock (Program.WrongList) Program.WrongList.Add(order.OrderIMEI);
+                        Loger.Info("Add Wrong IMEI: " + order.OrderIMEI);
+                        continue;
+                    }
+
+                    if (string.IsNullOrEmpty(tmobile.IMEI1))
+                    {
+                        lock (Program.WrongList) Program.WrongList.Add(order.OrderIMEI);
+                        Loger.Error(order.OrderIMEI + " not found!");
+                        continue;
+                    }
+
+                    order.IMEI1 = tmobile.IMEI1;
+                    order.IMEI2 = tmobile.IMEI2;
+                }
+                else
+                {
+                    order.IMEI1 = vivible.IMEI1;
+                    order.IMEI2 = vivible.IMEI2;
+                }
+
+                //--------------------------------------------------------------------------------------------------
+
+                Business business = new Business(order.OrderIMEI, fProxy);
+                if (business.Result != Business.ResultEnum.OK)   //if (vivible.Result != Visible.ResultEnum.OK)
+                {
+                    if (business.Result == Business.ResultEnum.ERROR_SOCKS)
+                        randProxy.DeleteBadProxy();
+                    Loger.Info("Repeat Business");
+                    fProxy = randProxy.Next();
+                    business = new Business(order.OrderIMEI, fProxy);
+                }
+
+                if (business.Response == null) continue;
+
+                order.CurrentGSMAStatus = (business.BlackListed == false) ? "Clean" : "Blacklisted";
+
+                //------------------------------------------------------------------------------------------------------
+
+                Ecoatm ecoatm = new Ecoatm(order.OrderIMEI, fProxy);
+
+                if (ecoatm.Result == Ecoatm.ResultEnum.WRONG_RESULT)
+                {
+                    lock (Program.WrongList) Program.WrongList.Add(order.OrderIMEI);
+                    Loger.Info("Add Wrong IMEI: " + order.OrderIMEI);
+                    continue;
+                }
+
+                if (ecoatm.StatusCode != 200)
+                {
+                    if (ecoatm.Result == Ecoatm.ResultEnum.ERROR_SOCKS) randProxy.DeleteBadProxy();
+                    Loger.Info("Repeat Ecoatm");
+                    fProxy = randProxy.Next();
+                    ecoatm = new Ecoatm(order.OrderIMEI, fProxy);
+                }
+
+                if (ecoatm.Result == Ecoatm.ResultEnum.WRONG_RESULT)
+                {
+                    lock (Program.WrongList) Program.WrongList.Add(order.OrderIMEI);
+                    Loger.Info("Add Wrong IMEI: " + order.OrderIMEI);
+                    continue;
+                }
+
+                if (ecoatm.Response == null)
+                {
+                    Loger.Info("Add Wrong: " + order.OrderIMEI);
+                    lock (Program.WrongList) Program.WrongList.Add(order.OrderIMEI);
+                    continue;
+                }
+
+                try
+                {
+                    order.Model = ecoatm.Response.model + " " + ecoatm.Response.memory + " " + ecoatm.Response.color + " " + ecoatm.Response.anumber;
+                    if (order.Model == null) continue;
+                    order.SerialNumber = ecoatm.Response.serialNumber;
+                    order.FMI = ecoatm.Response.fmip;
+                    order.SimLock = ecoatm.Response.simLock;
+                    order.Carrier = ecoatm.Response.carrier;
+                }
+                catch (Exception)
+                {
+                    Loger.Info("Add Wrong: " + order.OrderIMEI);
+                    lock (Program.WrongList) Program.WrongList.Add(order.OrderIMEI);
+                    continue;
+                }
+
+                lock (Program.OrdersList)
+                {
+                    Loger.Info("Add Order: " + order.OrderIMEI);
+                    Program.OrdersList.Add(order);
+                }
+
+            }
         }
 
     }

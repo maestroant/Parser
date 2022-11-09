@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Parser
 {
@@ -78,7 +75,8 @@ namespace Parser
             }
             catch (Exception ex)
             {
-                Loger.Error(_address + " : Proxy " + Proxy.ToString() + " : " + ex.Message + " : " + ex.GetType().FullName);
+                if (ex.Message.IndexOf("(407)") > -1) StatusCode = 407;
+                Loger.Error(ex, _address);
             }
         }
     }

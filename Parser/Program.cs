@@ -1,17 +1,7 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using OpenQA.Selenium.Remote;
-using System;
-using System.Collections;
+﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Net;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
-
 
 namespace Parser
 {
@@ -25,92 +15,64 @@ namespace Parser
         public static List<string> ProxyList = new List<string>();
         public static Setting setting = new Setting("config.json");
         public static string PackId = "0";
+        public static Statistics stats = new Statistics();
+
 
         static void Main(string[] args)
         {
+            Console.WriteLine("Press <Enter> for statistics!");
+            // тестовое задание
+            //FormatProxy fproxy = new FormatProxy("216.185.47.243:59100:rumyantsev0432:NxCfQwswIU");
+            //Ecoatm ecoatm = new Ecoatm("359276661220437", fproxy);
 
-            //ProxyList.Add("216.185.47.243:59100:rumyantsev0432:NxCfQwswIU");
+            //Console.WriteLine(ecoatm.Result);
+            //Console.ReadKey();
 
-            ProxyList = File.ReadLines("proxy.txt").ToList();
-            for (int i = 0; i < ProxyList.Count; i++)
+
+            lock (Program.PackId) Program.PackId = (string)setting.dynamic.PackId;
+            lock (ProxyList)
             {
-                if (ProxyList[i].Length < 5) ProxyList.RemoveAt(i);
-            }
-            Loger.Info("Proxy count: " + ProxyList.Count);
-
-            Adminka adminka = new Adminka((string)setting.dynamic.LoginAdmin, (string)setting.dynamic.PassAdmin);
-            adminka.Signin();
-            adminka.GetInProcess(2);
-
-            var date = new DateTime(2023, 1, 1);
-
-            if (DateTime.Today.AddMonths(1) < date)
-            {
-                Jobs.Go();
-            }
-
-            lock (WrongList)
-            {
-                if(WrongList.Count > 0)
+                using (StreamReader reader = File.OpenText("proxy.txt"))
                 {
-                    TextWriter tw = new StreamWriter("WrongList.txt");
-                    foreach (String s in WrongList)
-                        tw.WriteLine(s);
-                    tw.Close();
-                    WrongList.Clear();
+                    string line = "";
+                    while ((line = reader.ReadLine()) != null)
+                    {
+                        if ((string.IsNullOrEmpty(line)) || (line.Length < 5)) continue;
+                        ProxyList.Add(line);
+                    }
+                }
+                Loger.Info("Proxy count: " + ProxyList.Count);
+            }
+
+
+            //WrongList.Add("353103101679145");
+            //WrongList.Add("357265099853077");
+            //OrdersList.Add(new Order { OrderIMEI = "352107430153731", IMEI1 = "352107430153731" });
+            //SendTask();
+
+            // защита пасхалка
+            //var date = new DateTime(2022, 12, 6);
+            //if (DateTime.Today > date) return;
+
+            Thread t = new Thread(MainThread.Cycle);
+            t.Start();
+
+
+            while (true)
+            {
+                ConsoleKeyInfo c = Console.ReadKey();
+                if (c.Key == ConsoleKey.Enter)
+                {
+                    lock (Program.stats)
+                        stats.Show();
+
+                    Console.WriteLine("\nPress <Enter> for statistics!");
                 }
             }
 
-            if (OrdersList.Count < 1)
-            {
-                Loger.Info("Orders not found!");
-                Console.ReadKey();
-                return;
-            }
-
-            adminka.Signin();
-            if (adminka.SendTask()) lock (OrdersList) OrdersList.Clear();
-
-            // adminka.GetInProcess(100);
-
-                    //string s = "{\r\n   \"data\":{\r\n      \"verifyIMEINumber\":{\r\n         \"data\":\"{\\\"model\\\":\\\"iPhone 11 Pro Max\\\",\\\"modelNumber\\\":null,\\\"anumber\\\":\\\"A2161\\\",\\\"brand\\\":\\\"APPLE\\\",\\\"intendedCarrier\\\":\\\"ATT/TMO/VZW\\\",\\\"serialNumber\\\":\\\"F2LDD7PUN70G\\\",\\\"simLock\\\":\\\"Locked\\\",\\\"carrier\\\":\\\"AT&T\\\",\\\"memory\\\":\\\"64GB\\\",\\\"color\\\":\\\"Midnight Green\\\",\\\"financeLock\\\":\\\"NO\\\",\\\"fmip\\\":\\\"ON\\\",\\\"apiStatus\\\":\\\"API Check 1210 OK\\\"}\",\r\n         \"__typename\":\"VerifyIMEINumberResult\"\r\n      }\r\n   }\r\n}";
-
-                    //JObject obj = JObject.Parse(s);
-                    //JObject obj2 = JObject.Parse(obj["data"]["verifyIMEINumber"]["data"].ToString());
-                    //dynamic din = obj2;
-
-                    //Console.WriteLine(obj2["model"].ToString());
-                    //Console.WriteLine(din.model);
-
-                    //Console.ReadKey();
-
-            //Console.WriteLine("Press Esc to exit");
-
-            //while (true)
-            //{
-            //    if (Console.ReadKey(true).Key == ConsoleKey.S)
-            //    {
-            //        Statistics.Get();
-            //    }
-
-            //    if (Console.ReadKey(true).Key == ConsoleKey.Escape)
-            //    {
-            //        Process.GetCurrentProcess().Kill();
-            //    }
-            //} 
 
 
-            //ImeiList.Add("352844115151198");
-            //ImeiList.Add("354741664094654");
-            //ImeiList.Add("357337095223512");
-
-
-
-
-
-            Console.WriteLine("End.");
-
-            Console.ReadKey();
+            // Console.ReadKey();
         }
     }
 }

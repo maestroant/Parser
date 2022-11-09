@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Parser
 {
@@ -12,7 +8,7 @@ namespace Parser
     {
         public WebProxy Proxy = null;
         public string Host = null;
-        public int Port = 0;    
+        public int Port = 0;
         public string UserName = null;
         public string Password = null;
 
@@ -25,9 +21,9 @@ namespace Parser
 
                 blProxy = true;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Loger.Error("Error pinging proxy host:'" + strIP + ":" + intPort.ToString() + "'");
+                Loger.Error("Error ping proxy host:'" + strIP + ":" + intPort.ToString() + "'");
                 return false;
             }
             return blProxy;
@@ -66,14 +62,14 @@ namespace Parser
             string url = "http://" + urlProxy.Substring(0, c);
             n = c + 1;
             c = urlProxy.IndexOf(":", n);
-            UserName =  urlProxy.Substring(n, c - n);
+            UserName = urlProxy.Substring(n, c - n);
             c++;
             Password = urlProxy.Substring(c, urlProxy.Length - c);
             // Setup credentials
             ICredentials credentials = new NetworkCredential(UserName, Password);
 
             if (PingHost(Host, Port))
-            {             
+            {
                 // Setup proxy
                 this.Proxy = new WebProxy(url, true);
                 this.Proxy.Credentials = credentials;

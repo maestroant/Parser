@@ -1,12 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Security.Policy;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
-using Parser;
 
 namespace Parser
 {
@@ -17,12 +11,12 @@ namespace Parser
         public string Url { get; set; }
         public int Timeout { get; set; }
         public bool Visible { get; set; }
-        int timeout = 60000;
+        int timeout = 240000;
 
         // host - Сервер на котором стоит Xevil, url - сайта на котором проходим капчу  
         public XevilReCaptcha2(string host, string googlekey, string url, bool visible = true)
         {
-            Loger.Info("XevilReCaptcha2\nHost:" + host + "\nGooglekey: " + googlekey);
+            //Loger.Info("XevilReCaptcha2\nHost:" + host + "\nGooglekey: " + googlekey);
             Host = host;
             Googlekey = googlekey;
             Url = url;
@@ -61,7 +55,11 @@ namespace Parser
             getRequest2.Host = Host;
             getRequest2.Run(cookieContainer);
 
+            if (string.IsNullOrEmpty(getRequest2.Response)) return null;
+
+
             int i = 0;
+
             while (getRequest2.Response == "CAPCHA_NOT_READY")
             {
                 Thread.Sleep(5000);
@@ -69,14 +67,14 @@ namespace Parser
                 if (i > Timeout) break;
                 i += 5000;
             }
-
-            if ((getRequest.Response[0] != 'O') || (getRequest.Response[1] != 'K'))
+            // ERROR_CAPTCHA_UNSOLVABLE
+            if ((getRequest2.Response[0] != 'O') || (getRequest2.Response[1] != 'K'))
             {
                 // Xevil connection error
+                Loger.Error("Xevil error: " + getRequest2.Response);
                 return null;
             }
 
-            Loger.Info("OK");
             return TextParse.SubString(getRequest2.Response, "OK|");
         }
     }

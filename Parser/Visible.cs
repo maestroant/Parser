@@ -1,23 +1,22 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using OpenQA.Selenium;
+﻿using Newtonsoft.Json.Linq;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Net;
-using System.Net.Security;
-using System.Reflection;
-using System.Security.Cryptography.X509Certificates;
-using System.Security.Principal;
-using System.Text;
-using System.Threading.Tasks;
-using static Parser.Visible;
 
 namespace Parser
 {
     internal class Visible
     {
+        public enum ResultEnum
+        {
+            OK,
+            ERROR_HTTP,    // ошибкаб авторизации, таймат, что угодно
+            ERROR_SOCKS,   // ошибка 503 
+            ERROR_RESULT,  // ошибка не верный формат отдачи
+            WRONG_RESULT   // если модели нет или не та что нужно
+        }
+
+        public ResultEnum Result { get; set; }
+
         public dynamic Response { get; set; }
         public string IMEI1 { get; set; }
         public string IMEI2 { get; set; }
@@ -34,11 +33,23 @@ namespace Parser
             js.Host = "www.visible.com";
             js.Run(cookieContainer);
             StatusCode = js.StatusCode;
-            if (js.Response == null) return;
+
+            if (js.Response == null)
+            {
+                if (StatusCode == 407)
+                {
+                    Result = ResultEnum.ERROR_SOCKS;
+                    return;
+                }
+                Result = ResultEnum.ERROR_HTTP;
+                return;
+            }
 
             string authorization = TextParse.SubString(js.Response, "API_TOKEN:\"", "\",");
             if (string.IsNullOrEmpty(authorization))
             {
+
+                Result = ResultEnum.ERROR_HTTP;
                 Loger.Error("API_TOKEN not found!");
                 return;
             }
@@ -54,19 +65,33 @@ namespace Parser
             post.Run(cookieContainer);
             StatusCode = post.StatusCode;
 
+            if (StatusCode == 407)
+            {
+                Result = ResultEnum.ERROR_SOCKS;
+                return;
+            }
+
+            if (StatusCode != 200)
+            {
+                Result = ResultEnum.ERROR_HTTP;
+                return;
+            }
+
             if (post.Response != null)
             {
                 try
-                {   
+                {
                     Loger.Info("Log Response:\n" + post.Response);
                     Response = JObject.Parse(post.Response);
                     IMEI1 = Response.IMEI1;
                     IMEI2 = Response.IMEI2;
                     Loger.Info("IMEI1: " + IMEI1 + "\nIMEI2: " + IMEI2);
+                    if (IMEI1 == null) Result = ResultEnum.ERROR_RESULT;
+                    return;
                 }
                 catch (Exception ex)
                 {
-                    Loger.Error("Visible JSON parse : " + ex.GetType().FullName);
+                    Loger.Error(ex, "Visible JSON parse");
                 }
             }
         }

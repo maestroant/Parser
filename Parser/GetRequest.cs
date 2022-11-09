@@ -1,14 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
-using System.Net.Mime;
 using System.Net.Security;
 using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Parser
 {
@@ -63,7 +59,7 @@ namespace Parser
                 methodType.GetField("ContentBodyNotAllowed", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(currentMethod, false);
 
 
-                response = (HttpWebResponse) _request.GetResponse();
+                response = (HttpWebResponse)_request.GetResponse();
                 StatusCode = (int)response.StatusCode;
 
                 var stream = response.GetResponseStream();
@@ -72,7 +68,8 @@ namespace Parser
             }
             catch (Exception ex)
             {
-                Loger.Error(_address + " : Proxy " + Proxy.ToString() + " : " + ex.Message + " : " + ex.GetType().FullName);
+                if (ex.Message.IndexOf("(407)") > -1) StatusCode = 407;
+                Loger.Error(ex, _address);
             }
         }
     }
