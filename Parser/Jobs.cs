@@ -132,6 +132,7 @@ namespace Parser
 
                 if (ecoatm.Response == null)
                 {
+                    Loger.Info("Response = null");
                     Loger.Info("Add Wrong: " + order.OrderIMEI);
                     lock (Program.WrongList) Program.WrongList.Add(order.OrderIMEI);
                     continue;

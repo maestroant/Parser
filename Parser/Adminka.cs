@@ -60,7 +60,7 @@ namespace Parser
         public int GetNew(int count = 100)
         {
             Loger.Info("GetTask...");
-
+            if (string.IsNullOrEmpty(Html1)) return -1;
             string newImeiOrders =
                 TextParse.SubString(Html1, "<a  class=\"navbar-nav-link dropdown-toggle",
                 "href=\"https://", "\">New IMEI Orders</a>");
@@ -78,8 +78,6 @@ namespace Parser
             if (string.IsNullOrEmpty(getRequest.Response))
                 return -1;
 
-            //string testCarrierCheck = TextParse.SubString(getRequest.Response, 
-            //    "<td>TEST CARRIER CHECK", "<a title=\"Take Action\" href=\"", "\"><i class=");
             string testCarrierCheck;
             lock (Program.PackId)
                 testCarrierCheck = GetUrlByPakid(getRequest.Response, Program.PackId);
@@ -120,8 +118,6 @@ namespace Parser
             if (string.IsNullOrEmpty(testGetOrders)) return -1; // Невозможно найти ссылку
 
             PostRequest postRequest = new PostRequest(testGetOrders);
-            //lock (Program.PackId) Program.PackId = TextParse.SubString(testGetOrders, "packId=", "&");
-            //postRequest.Proxy = new WebProxy("127.0.0.1:8888");
 
             string param = "";
             foreach (var item in itemStr)
@@ -164,7 +160,7 @@ namespace Parser
         public int GetInProcess(int count = 100)
         {
             Loger.Info("GetInProcess...");
-
+            if (string.IsNullOrEmpty(Html1)) return -1;
             string newImeiOrders =
                    TextParse.SubString(Html1, "<a  class=\"navbar-nav-link dropdown-toggle",
                    ">New IMEI Orders</a><a class=\"dropdown-item\" href=\"https://", "\">In Process IMEI Orders");
@@ -182,10 +178,19 @@ namespace Parser
                 return -1;
 
             string testCarrierCheck;
-            lock (Program.PackId)
+            try
             {
-                testCarrierCheck = GetUrlByPakid(getRequest.Response, Program.PackId);
+                lock (Program.PackId)
+                {
+                    testCarrierCheck = GetUrlByPakid(getRequest.Response, Program.PackId);
+                }
             }
+            catch (Exception ex)
+            {
+                Loger.Error(ex, "GetUrlByPakid");
+                return -1;
+            }
+
 
             if (string.IsNullOrEmpty(testCarrierCheck))
             {
@@ -359,20 +364,6 @@ namespace Parser
 
             Loger.Error("Failed to send orders");
 
-            // если не вышло отправить сохранить в файл
-            //try
-            //{
-            //    Loger.Error("Failed to send orders");
-            //    File.AppendAllText("log\\NoSendWrong.txt", param);
-            //}
-            //catch (Exception ex)
-            //{
-            //    Loger.Error(ex, "Error save to file log\\NoSendOrders.txt");
-            //}
-
-
-
-
             return true;
         }
 
@@ -450,41 +441,50 @@ namespace Parser
         // Находит нужную строку задания с заданным паид. возвращает url
         private string GetUrlByPakid(string html, string packId)
         {
-            if (string.IsNullOrEmpty(html)) return null;
-            string tbody = TextParse.SubString(html, "<tbody>", "</tbody>");
-
-            int strtIndex = 0;
-            int endIndex = 0;
-
-            while (true)
+            try
             {
-                if ((strtIndex = tbody.IndexOf("<tr>", strtIndex)) < 0) break;
-                if ((endIndex = tbody.IndexOf("</tr>", strtIndex)) < 0) break;
-                strtIndex += 4;
-                string s = tbody.Substring(strtIndex, endIndex - strtIndex);
+                if ( (string.IsNullOrEmpty(html)) || (string.IsNullOrEmpty(packId)) )  return null;
+                string tbody = TextParse.SubString(html, "<tbody>", "</tbody>");
 
-                int si = s.IndexOf("<a title=\"Take Action\" href=\"");
-                if (si < 0)
+                int strtIndex = 0;
+                int endIndex = 0;
+
+                while (true)
                 {
-                    // ошибка ParseItem
-                    return null;
+                    if ((strtIndex = tbody.IndexOf("<tr>", strtIndex)) < 0) break;
+                    if ((endIndex = tbody.IndexOf("</tr>", strtIndex)) < 0) break;
+                    strtIndex += 4;
+                    string s = tbody.Substring(strtIndex, endIndex - strtIndex);
+
+                    int si = s.IndexOf("<a title=\"Take Action\" href=\"");
+                    if (si < 0)
+                    {
+                        // ошибка ParseItem
+                        return null;
+                    }
+                    si += 29;
+
+                    int ei = s.IndexOf("\"", si);
+                    if (si < 0)
+                    {
+                        // ошибка ParseItem
+                        return null;
+                    }
+
+                    string url = s.Substring(si, ei - si);
+                    if (string.IsNullOrEmpty(url)) return null;
+                    string id = TextParse.SubString(url, "packId=", "&");
+
+                    if (packId == id)
+                        return url;
+
+                    strtIndex = endIndex + 5;
                 }
-                si += 29;
-
-                int ei = s.IndexOf("\"", si);
-                if (si < 0)
-                {
-                    // ошибка ParseItem
-                    return null;
-                }
-
-                string url = s.Substring(si, ei - si);
-                string id = TextParse.SubString(url, "packId=", "&");
-
-                if (packId == id)
-                    return url;
-
-                strtIndex = endIndex + 5;
+            }
+            catch (Exception ex)
+            {
+                Loger.Error(ex);
+                return null;
             }
 
             return null;
@@ -544,36 +544,6 @@ namespace Parser
             return param;
         }
 
-        //private string FormatRawToParam(int index)
-        //{
-        //    lock (Program.OrdersList)
-        //    {
-        //        string s = "Model: " + Program.OrdersList[index].Model + " <br>IMEI1: " + Program.OrdersList[index].IMEI1;
-        //        if (Program.OrdersList[index].IMEI2 != null) s += " <br>IMEI2: " + Program.OrdersList[index].IMEI2;
-        //        s +=   " <br>Serial Number: " + Program.OrdersList[index].SerialNumber +
-        //            " <br>FMI: " + Program.OrdersList[index].FMI + "<br>Current GSMA Status: " + Program.OrdersList[index].CurrentGSMAStatus +
-        //                               " <br>Carrier: " + Program.OrdersList[index].Carrier + " <br>SimLock Status: " + Program.OrdersList[index].SimLock + "\r\n";
-        //        Loger.Info(s);
-        //        return s;
-        //    }
-
-        //}
-
-        //private string FormatRawWrongToParam(int index)
-        //{
-
-        //    lock (Program.WrongList)
-        //    {
-        //        string s = "Model: " + Program.OrdersList[index].Model + " <br>IMEI1: " + Program.OrdersList[index].IMEI1;
-        //        if (Program.OrdersList[index].IMEI2 != null) s += " <br>IMEI2: " + Program.OrdersList[index].IMEI2;
-        //        s += " <br>Serial Number: " + Program.OrdersList[index].SerialNumber +
-        //            " <br>FMI: " + Program.OrdersList[index].FMI + " Current GSMA Status: " + Program.OrdersList[index].CurrentGSMAStatus +
-        //                               " <br>Carrier: " + Program.OrdersList[index].Carrier + " <br>SimLock Status: " + Program.OrdersList[index].SimLock + "\r\n";
-        //        Loger.Info(s);
-        //        return s;
-        //    }
-
-        //}
 
         // все ордера Program.WrongList  привести в строку 
         private string FormatWrong()

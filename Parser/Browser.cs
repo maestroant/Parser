@@ -1,5 +1,6 @@
 ﻿using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Chrome.ChromeDriverExtensions;   // https://github.com/RDavydenko/OpenQA.Selenium.Chrome.ChromeDriverExtensions
+using OpenQA.Selenium.Support.UI;
 using System;
 using System.Threading;
 
@@ -24,6 +25,10 @@ namespace Parser
             options.AddArgument("ignore-certificate-errors");
             options.AddArgument("no-sandbox");
             options.AddArgument("--blink-settings=imagesEnabled=false");
+            options.AddArgument("--dns-prefetch-disable");
+            options.AddArgument("--disable-notifications");
+            options.AddArgument("--no-default-browser-check");
+            //options.AddArguments("headless");
 
             try
             {
@@ -32,12 +37,10 @@ namespace Parser
                 ChromeDriver driver = new ChromeDriver(driverService, options);
                 driver.Navigate().GoToUrl(url);
                 OpenQA.Selenium.Cookie cookie = null;
-                for (var i = 0; i < 50; i++)
-                {
-                    if ((cookie = driver.Manage().Cookies.GetCookieNamed(nameCookie)) != null) break; // "a_token"
-                    Thread.Sleep(100);
-                }
+                var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
+                cookie = wait.Until(drv => drv.Manage().Cookies.GetCookieNamed(nameCookie));
 
+                driver.Close();
                 driver.Quit();
                 if (cookie != null)
                     return cookie.Value;

@@ -50,7 +50,7 @@ namespace Parser
                 _request.AllowAutoRedirect = true;
                 //_request.ContentType = "application/x-www-form-urlencoded";
                 _request.KeepAlive = true;
-                _request.Timeout = 60000;
+                _request.Timeout = 120000;
 
                 foreach (var pair in Headers)
                 {

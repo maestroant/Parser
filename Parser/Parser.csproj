@@ -110,6 +110,7 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="bin\Debug\config.json" />
+    <None Include="config.json" />
     <None Include="packages.config" />
     <None Include="Parser_TemporaryKey.pfx" />
   </ItemGroup>

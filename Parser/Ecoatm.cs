@@ -53,7 +53,7 @@ namespace Parser
             StatusCode = html.StatusCode;
             if (string.IsNullOrEmpty(mainjs.Response)) return;
 
-            string googleKey = TextParse.SubString(mainjs.Response, "H=\"*Offer valid for qualified devices until 12/31/2022.\",u=\"", "\",X=\"https://");
+            string googleKey = TextParse.SubString(mainjs.Response, ".\",u=\"", "\",X=\"https://");
             string cloudUrl = TextParse.SubString(html.Response, "var OMNI_API_URL = \"", "\";");
 
             cloudUrl += "/graphql";
@@ -173,6 +173,7 @@ namespace Parser
                     string brand = (string)Response.brand;
                     if (post.Response.IndexOf("APPLE", StringComparison.CurrentCultureIgnoreCase) < 0)
                     {
+                        Loger.Info("No apple line in the Response");
                         Result = ResultEnum.WRONG_RESULT;
                         return;
                     }

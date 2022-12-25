@@ -209,11 +209,12 @@ namespace Parser
 
                 ThreadList.Clear();
 
-                for (int i = 0; i < (int)count; i++)
+                for (int i = 0; i < count; i++)
                 {
                     ThreadList.Add(new Thread(Jobs.Go));
                     ThreadList[i].Name = i.ToString();
                     ThreadList[i].Start();
+                    Thread.Sleep(20);
                 }
 
                 while (true)

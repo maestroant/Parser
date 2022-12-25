@@ -44,7 +44,7 @@ namespace Parser
                 _request.Host = Host;
                 _request.Referer = Referer;
                 _request.UserAgent = Useragent;
-                _request.Timeout = 60000;
+                _request.Timeout = 120000;
 
 
                 foreach (var pair in Headers)

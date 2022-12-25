@@ -34,7 +34,7 @@ namespace Parser
             js.Run(cookieContainer);
             StatusCode = js.StatusCode;
 
-            if (js.Response == null)
+            if (string.IsNullOrEmpty(js.Response))
             {
                 if (StatusCode == 407)
                 {

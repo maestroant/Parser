@@ -6,22 +6,35 @@ namespace Parser
     internal class RandomProxy
     {
         public int indexProxy = 0;
+        Random rnd = new Random();
 
         public FormatProxy Next()
         {
             string proxy;
-            Random rnd = new Random();
+            
             FormatProxy fProxy;
             lock (Program.ProxyList)
             {
 
                 while (Program.ProxyList.Count > 0)
                 {
-                    indexProxy = rnd.Next(Program.ProxyList.Count);
+
+                    //if (Program.ProxyList.Count > 1)
+                    //{
+                    //    {
+                    //        r = rnd.Next(Program.ProxyList.Count);
+                    //    } while (r == indexProxy);
+
+                    //    indexProxy = r;
+                    //}
+                    //else
+                    //    indexProxy = 0;
+
+                    int indexProxy = rnd.Next(Program.ProxyList.Count);
                     if (indexProxy >= Program.ProxyList.Count) continue;
 
                     proxy = Program.ProxyList[indexProxy];
-                    //Loger.Info("Proxy Set: " + proxy);
+                    
                     fProxy = new FormatProxy(proxy);
                     if (fProxy.Proxy == null)
                     {
@@ -29,6 +42,7 @@ namespace Parser
                         continue;
                     }
 
+                    Loger.Info("Proxy Set: " + proxy);
                     return fProxy;
                 }
 
